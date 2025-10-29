@@ -141,7 +141,7 @@ function parseAdjacencyList(input: string): ParseResult {
     }
 
     return { success: true, graph: convertAdjacencyListToGraph(adjacencies) };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Invalid adjacency list format' };
   }
 }
@@ -164,7 +164,7 @@ function parseEdgeList(input: string): ParseResult {
     }
 
     return { success: true, graph: convertEdgeListToGraph(edges) };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Invalid edge list format' };
   }
 }
@@ -187,7 +187,7 @@ function parseAdjacencyMatrix(input: string): ParseResult {
     }
 
     return { success: true, graph: convertMatrixToGraph(rows) };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Invalid matrix format' };
   }
 }

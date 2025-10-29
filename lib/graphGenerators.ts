@@ -4,8 +4,10 @@ export interface GraphElement {
     label?: string;
     source?: string;
     target?: string;
+    weight?: number;
   };
   position?: { x: number; y: number };
+  classes?: string;
 }
 
 export const generateGraph = (type: string): GraphElement[] => {

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape, { Core } from 'cytoscape';
@@ -13,7 +15,8 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [nodeCounter, setNodeCounter] = useState(6);
-  const isInternalChange = useRef(false); 
+  const isInternalChange = useRef(false);
+  const [isInitialized, setIsInitialized] = useState(false); 
 
   // Function to create a new node
   const createNode = useCallback((position: { x: number; y: number }) => {
@@ -143,6 +146,8 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
   useEffect(() => {
     if (!containerRef.current || cyRef.current) return;
 
+    console.log('GraphCanvas - Initializing with', elements?.length || 0, 'elements');
+
     // Use provided elements or default sample
     const graphElements = elements || [
       // Default nodes
@@ -231,6 +236,32 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
             'overlay-padding': 0,
             'overlay-color': 'transparent'
           }
+        },
+        {
+          selector: '.visited-node',
+          style: {
+            'background-color': '#60a5fa',
+            'color': '#ffffff'
+          }
+        },
+        {
+          selector: '.current-node',
+          style: {
+            'background-color': '#f59e0b',
+            'color': '#ffffff',
+            'width': '60px',
+            'height': '60px',
+            'border-width': '3px',
+            'border-color': '#fbbf24'
+          }
+        },
+        {
+          selector: '.highlighted-edge',
+          style: {
+            'line-color': '#f59e0b',
+            'width': 5,
+            'z-index': 999
+          }
         }
       ],
       layout: {
@@ -264,7 +295,7 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
     cyRef.current.on('cxttap', (evt) => {
       // Only create node if clicking on background, not on a node or edge
       if (evt.target === cyRef.current) {
-        const position = evt.position || evt.cyPosition;
+        const position = evt.position;
         if (position) {
           console.log('Right-click creating node at:', position);
           const newNode = {
@@ -279,9 +310,9 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
           setNodeCounter(localNodeCounter);
           
           // Notify parent
-          if (onGraphChange) {
+          if (onGraphChange && cyRef.current) {
             isInternalChange.current = true;
-            const allElements = cyRef.current?.elements().map((ele: any) => {
+            const allElements = cyRef.current.elements().map((ele: any) => {
               const isNode = !ele.data('source');
               if (isNode) {
                 return {
@@ -290,10 +321,10 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
                 };
               } else {
                 return {
-                  data: { 
-                    id: ele.id(), 
-                    source: ele.data('source'), 
-                    target: ele.data('target') 
+                  data: {
+                    id: ele.id(),
+                    source: ele.data('source'),
+                    target: ele.data('target')
                   }
                 };
               }
@@ -310,7 +341,7 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
       if (evt.target === cyRef.current) {
         // Check if shift key is NOT pressed (to avoid conflict with edge creation)
         if (!evt.originalEvent || !evt.originalEvent.shiftKey) {
-          const position = evt.position || evt.cyPosition;
+          const position = evt.position;
           if (position) {
             console.log('Click creating node at:', position);
             const newNode = {
@@ -325,9 +356,9 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
             setNodeCounter(localNodeCounter);
             
             // Notify parent
-            if (onGraphChange) {
+            if (onGraphChange && cyRef.current) {
               isInternalChange.current = true;
-              const allElements = cyRef.current?.elements().map((ele: any) => {
+              const allElements = cyRef.current.elements().map((ele: any) => {
                 const isNode = !ele.data('source');
                 if (isNode) {
                   return {
@@ -419,9 +450,9 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
             cyRef.current?.add(newEdge);
             
             // Notify parent
-            if (onGraphChange) {
+            if (onGraphChange && cyRef.current) {
               isInternalChange.current = true;
-              const allElements = cyRef.current?.elements().map((ele: any) => {
+              const allElements = cyRef.current.elements().map((ele: any) => {
                 const isNode = !ele.data('source');
                 if (isNode) {
                   return {
@@ -525,9 +556,9 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
             cyRef.current?.add(newEdge);
             
             // Notify parent
-            if (onGraphChange) {
+            if (onGraphChange && cyRef.current) {
               isInternalChange.current = true;
-              const allElements = cyRef.current?.elements().map((ele: any) => {
+              const allElements = cyRef.current.elements().map((ele: any) => {
                 const isNode = !ele.data('source');
                 if (isNode) {
                   return {
@@ -566,7 +597,7 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
       }
     });
     
-    cyRef.current.on('mouseup', (evt) => {
+    cyRef.current.on('mouseup', () => {
       if (isCreatingEdge) {
         // Clean up temporary elements
         if (tempEdge) {
@@ -591,7 +622,26 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
       cyRef.current.layout({ name: 'circle', radius: 150 }).run();
       // Only fit on initial load when no positions are set
       setTimeout(() => {
-        cyRef.current?.fit(undefined, 50);
+        try {
+          if (cyRef.current && !cyRef.current.destroyed()) {
+            cyRef.current.fit(undefined, 50);
+          }
+        } catch (e) {
+          console.warn('Error fitting graph:', e);
+        }
+        setIsInitialized(true);
+      }, 100);
+    } else {
+      // Has positions, just fit to view
+      setTimeout(() => {
+        try {
+          if (cyRef.current && !cyRef.current.destroyed()) {
+            cyRef.current.fit(undefined, 50);
+          }
+        } catch (e) {
+          console.warn('Error fitting graph:', e);
+        }
+        setIsInitialized(true);
       }, 100);
     }
 
@@ -601,37 +651,70 @@ export default function GraphCanvas({ className = '', elements, onGraphChange }:
         cyRef.current.destroy();
       }
     };
-  }, []); // Remove dependencies to initialize only once
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle external element updates
   useEffect(() => {
     if (!cyRef.current || !elements) return;
-    
+
     // Skip if this was an internal change
     if (isInternalChange.current) {
       isInternalChange.current = false;
       return;
     }
-    
-    // Update the graph with new elements without recreating everything
-    cyRef.current.elements().remove();
-    cyRef.current.add(elements);
-    
-    // Update node counter based on new elements
-    const nodeIds = elements
-      .filter(el => !el.data.source)
-      .map(el => parseInt(el.data.id))
-      .filter(id => !isNaN(id));
-    const maxNodeId = nodeIds.length > 0 ? Math.max(...nodeIds) : 0;
-    setNodeCounter(maxNodeId + 1);
-    
-    // Apply layout if no positions are set
-    const hasPositions = elements.some(el => el.position);
-    if (!hasPositions) {
-      cyRef.current.layout({ name: 'circle', radius: 150 }).run();
-      // Fit only when loading a new graph without positions
+
+    // Check if we're just updating classes (same number of elements)
+    const currentElements = cyRef.current.elements();
+    const sameStructure = currentElements.length === elements.length;
+
+    if (sameStructure) {
+      // Just update classes without removing/adding
+      const classUpdates: any[] = [];
+      elements.forEach((element) => {
+        const cyElement = cyRef.current?.getElementById(element.data.id);
+        if (cyElement) {
+          // Remove all existing classes
+          cyElement.removeClass('visited-node current-node highlighted-edge');
+          // Add new classes if specified
+          if (element.classes) {
+            cyElement.addClass(element.classes);
+            classUpdates.push({ id: element.data.id, classes: element.classes });
+          }
+        }
+      });
+      if (classUpdates.length > 0) {
+        console.log('GraphCanvas - Updated classes:', classUpdates);
+      }
+    } else {
+      // Full update: remove and re-add all elements
+      console.log('GraphCanvas - Full update with', elements.length, 'elements');
+      cyRef.current.elements().remove();
+      cyRef.current.add(elements);
+
+      // Update node counter based on new elements
+      const nodeIds = elements
+        .filter(el => !el.data.source)
+        .map(el => parseInt(el.data.id))
+        .filter(id => !isNaN(id));
+      const maxNodeId = nodeIds.length > 0 ? Math.max(...nodeIds) : 0;
+      setNodeCounter(maxNodeId + 1);
+
+      // Apply layout if no positions are set
+      const hasPositions = elements.some(el => el.position);
+      if (!hasPositions) {
+        cyRef.current.layout({ name: 'circle', radius: 150 }).run();
+      }
+
+      // Always fit to view on full update
       setTimeout(() => {
-        cyRef.current?.fit(undefined, 50);
+        try {
+          if (cyRef.current && !cyRef.current.destroyed()) {
+            cyRef.current.fit(undefined, 50);
+            console.log('GraphCanvas - Fitted to view');
+          }
+        } catch (e) {
+          console.warn('Error fitting graph:', e);
+        }
       }, 100);
     }
   }, [elements]);

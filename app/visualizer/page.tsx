@@ -1,10 +1,14 @@
 "use client";
 import GraphCanvas from '@/components/GraphCanvas';
 import Sidebar from '@/components/Sidebar';
+import AlgorithmRunner from '@/components/AlgorithmRunner';
 import { useState, useEffect } from 'react';
 import { generateGraph, GraphElement } from '@/lib/graphGenerators';
 
+type Tab = 'build' | 'algorithms';
+
 export default function VisualizerPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('build');
   const [showInstructions, setShowInstructions] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentGraph, setCurrentGraph] = useState<GraphElement[]>(generateGraph('default'));
@@ -39,6 +43,7 @@ export default function VisualizerPage() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyIndex, history]);
 
   // Save current state to history
@@ -114,9 +119,38 @@ export default function VisualizerPage() {
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
-      
-      {/* Desktop Layout */}
-      <div className={`hidden lg:block transition-all duration-300 h-full pt-24 ${sidebarOpen ? 'ml-80' : 'ml-0'}`}>
+
+      {/* Tab Navigation */}
+      <div className={`fixed top-16 left-0 right-0 z-40 bg-black border-b border-gray-800 transition-all duration-300 ${sidebarOpen ? 'lg:left-80' : 'lg:left-0'}`}>
+        <div className="flex items-center px-4 md:px-6">
+          <button
+            onClick={() => setActiveTab('build')}
+            className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
+              activeTab === 'build'
+                ? 'text-white border-blue-500'
+                : 'text-gray-400 border-transparent hover:text-gray-200'
+            }`}
+          >
+            Build Graph
+          </button>
+          <button
+            onClick={() => setActiveTab('algorithms')}
+            className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
+              activeTab === 'algorithms'
+                ? 'text-white border-blue-500'
+                : 'text-gray-400 border-transparent hover:text-gray-200'
+            }`}
+          >
+            Run Algorithms
+          </button>
+        </div>
+      </div>
+
+      {/* Build Graph Tab Content */}
+      {activeTab === 'build' && (
+        <>
+          {/* Desktop Layout */}
+          <div className={`hidden lg:block transition-all duration-300 h-full pt-36 ${sidebarOpen ? 'ml-80' : 'ml-0'}`}>
         <div className="h-full p-6">
           <div className="h-full bg-gray-950 rounded-xl border border-gray-800 overflow-hidden relative">
             {/* Graph Name Display */}
@@ -138,8 +172,8 @@ export default function VisualizerPage() {
         </div>
       </div>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden h-full pt-24">
+          {/* Mobile Layout */}
+          <div className="lg:hidden h-full pt-36">
         <div className="h-full p-4">
           <div className="h-full bg-gray-950 rounded-xl border border-gray-800 overflow-hidden relative">
             {/* Graph Name Display */}
@@ -301,6 +335,17 @@ export default function VisualizerPage() {
               <span className="w-1.5 h-1.5 bg-white rounded-full mr-2 flex-shrink-0"></span>
               Undo/Redo buttons → Revert changes
             </div>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Run Algorithms Tab Content */}
+      {activeTab === 'algorithms' && (
+        <div className={`transition-all duration-300 h-full pt-36 ${sidebarOpen ? 'lg:ml-80' : 'lg:ml-0'}`}>
+          <div className="h-full p-6">
+            <AlgorithmRunner graph={currentGraph} graphName={currentGraphName} />
           </div>
         </div>
       )}
